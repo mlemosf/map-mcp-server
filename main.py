@@ -4,6 +4,7 @@ import geopandas as gpd
 DEFAULT_EPSG=31983 # SIRGAS 2000
 JSON_PATH = "~/Downloads/upt.json"
 #JSON_PATH = "~/Downloads/classes_de_solos.json"
+
 app = FastAPI()
 
 
@@ -38,6 +39,25 @@ def get_features_area(layer, feature):
             'layer': layer,
             'feature': feature,
             'total_area': feature_list
+        }
+
+@app.get("/{layer}/perimeter/{feature}")
+def get_feature_perimeter(layer, feature):
+        gdf = gpd.read_file(JSON_PATH)
+        gdf = gdf.to_crs(epsg=DEFAULT_EPSG)
+
+        # TODO: Ver direito por que isso não funciona no futuro
+        try:
+            feature_perimeter = gdf.groupby(feature).length.sum()
+            feature_list = [{'feature_class': i, 'total_area': j} for i,j in feature_perimeter.items()]
+        except Exception:
+            new_gdf = gpd.GeoDataFrame(gdf[[feature, 'geometry']])
+            new_gdf['perimeter'] = gdf.geometry.length
+            feature_list = [{'feature_class': row[feature], 'total_area': row['perimeter']} for idx, row in new_gdf.iterrows()]
+        return {
+            'layer': layer,
+            'feature': feature,
+            'total_perimeter': feature_list
         }
 
 @app.get("/{layer}/area/{feature}/{feature_class}")
