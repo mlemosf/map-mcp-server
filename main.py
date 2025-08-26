@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 import geopandas as gpd
 
+DEFAULT_EPSG=31983 # SIRGAS 2000
+JSON_PATH = "~/Downloads/upt.json"
+#JSON_PATH = "~/Downloads/classes_de_solos.json"
 app = FastAPI()
 
 
@@ -10,7 +13,7 @@ def read_root():
 
 @app.get("/{layer}/features")
 def get_layer_features(layer):
-    gdf = gpd.read_file("~/Downloads/classes_de_solos.json")
+    gdf = gpd.read_file(JSON_PATH)
     features = list(gdf.columns)
     return {
         'layer': layer,
@@ -20,11 +23,17 @@ def get_layer_features(layer):
 
 @app.get("/{layer}/area/{feature}")
 def get_features_area(layer, feature):
-        gdf = gpd.read_file("~/Downloads/classes_de_solos.json")
-        feature_area = gdf.groupby(feature).area.sum()
-        print(feature_area)
-        feature_list = [{'feature_class': i.lower(), 'total_area': j} for i,j in feature_area.items()]
-        print(feature_list)
+        gdf = gpd.read_file(JSON_PATH)
+        gdf = gdf.to_crs(epsg=DEFAULT_EPSG)
+
+        # TODO: Ver direito por que isso não funciona no futuro
+        try:
+            feature_area = gdf.groupby(feature).area.sum()
+            feature_list = [{'feature_class': i, 'total_area': j} for i,j in feature_area.items()]
+        except Exception:
+            new_gdf = gpd.GeoDataFrame(gdf[[feature, 'geometry']])
+            new_gdf['area'] = gdf.geometry.area
+            feature_list = [{'feature_class': row[feature], 'total_area': row['area']} for idx, row in new_gdf.iterrows()]
         return {
             'layer': layer,
             'feature': feature,
@@ -33,7 +42,7 @@ def get_features_area(layer, feature):
 
 @app.get("/{layer}/area/{feature}/{feature_class}")
 def get_feature_area(layer, feature, feature_class):
-        gdf = gpd.read_file("~/Downloads/classes_de_solos.json")
+        gdf = gpd.read_file(JSON_PATH)
         feature_data = gdf[gdf[feature] == feature_class]
 
         feature_area = feature_data.area.sum()
