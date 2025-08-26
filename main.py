@@ -60,6 +60,33 @@ def get_feature_perimeter(layer, feature):
             'total_perimeter': feature_list
         }
 
+@app.get("/{layer}/centroid/{feature}")
+def get_feature_centroid(layer, feature):
+        gdf = gpd.read_file(JSON_PATH)
+        gdf = gdf.to_crs(epsg=DEFAULT_EPSG)
+
+        # TODO: Ver direito por que isso não funciona no futuro
+        try:
+            feature_perimeter = gdf.groupby(feature).centroid.to_crs(epsg=4326)
+            feature_list = [{'feature_class': i, 'total_area': j} for i,j in feature_perimeter.items()]
+        except Exception:
+            new_gdf = gpd.GeoDataFrame(gdf[[feature, 'geometry']])
+            new_gdf['centroid'] = gdf.geometry.centroid.to_crs(epsg=4326)
+            feature_list = [{
+                'feature_class': row[feature],
+                'centroid':{
+                    'x': row['centroid'].x,
+                    'y': row['centroid'].y,
+                }
+            } for idx, row in new_gdf.iterrows()]
+        return {
+            'layer': layer,
+            'feature': feature,
+            'centroids': feature_list
+        }
+
+
+
 @app.get("/{layer}/area/{feature}/{feature_class}")
 def get_feature_area(layer, feature, feature_class):
         gdf = gpd.read_file(JSON_PATH)
