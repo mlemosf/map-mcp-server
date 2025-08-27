@@ -7,17 +7,6 @@ JSON_PATH = "~/Downloads/upt.json"
 
 app = FastAPI()
 
-
-@app.get("/")
-def read_root():
-    """
-    Root endpoint for the geospatial service.
-
-    Returns:
-        dict: A simple greeting message.
-    """
-    return {"Hello": "World"}
-
 @app.get("/{layer}/features")
 def get_layer_features(layer: str):
     """
