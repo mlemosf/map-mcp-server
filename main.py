@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 import geopandas as gpd
+from models import Features, FeatureArea, FeatureAreaShort, FeaturePerimeter, FeatureCentroids
 
 DEFAULT_EPSG=31983 # SIRGAS 2000
 JSON_PATH = "~/Downloads/upt.json"
@@ -8,7 +9,7 @@ JSON_PATH = "~/Downloads/upt.json"
 app = FastAPI()
 
 @app.get("/{layer}/features")
-def get_layer_features(layer: str):
+def get_layer_features(layer: str) -> Features:
     """
     Retrieve feature list for a specific layer.
 
@@ -27,7 +28,7 @@ def get_layer_features(layer: str):
     
 
 @app.get("/{layer}/area/{feature}")
-def get_features_area(layer: str, feature: str):
+def get_features_area(layer: str, feature: str) -> FeatureArea:
     """
     Calculate total area by feature class for a specific layer.
 
@@ -52,11 +53,11 @@ def get_features_area(layer: str, feature: str):
     return {
         'layer': layer,
         'feature': feature,
-        'total_area': feature_list
+        'feature_list': feature_list
     }
 
 @app.get("/{layer}/perimeter/{feature}")
-def get_feature_perimeter(layer: str, feature: str):
+def get_feature_perimeter(layer: str, feature: str) -> FeaturePerimeter:
     """
     Calculate total perimeter by feature class for a specific layer.
 
@@ -76,7 +77,7 @@ def get_feature_perimeter(layer: str, feature: str):
     except Exception:
         new_gdf = gpd.GeoDataFrame(gdf[[feature, 'geometry']])
         new_gdf['perimeter'] = gdf.geometry.length
-        feature_list = [{'feature_class': row[feature], 'total_area': row['perimeter']} for idx, row in new_gdf.iterrows()]
+        feature_list = [{'feature_class': row[feature], 'perimeter': row['perimeter']} for idx, row in new_gdf.iterrows()]
     
     return {
         'layer': layer,
@@ -85,7 +86,7 @@ def get_feature_perimeter(layer: str, feature: str):
     }
 
 @app.get("/{layer}/centroid/{feature}")
-def get_feature_centroid(layer: str, feature: str):
+def get_feature_centroid(layer: str, feature: str) -> FeatureCentroids:
     """
     Calculate centroids for features in a specific layer.
 
@@ -101,7 +102,7 @@ def get_feature_centroid(layer: str, feature: str):
 
     try:
         feature_perimeter = gdf.groupby(feature).centroid.to_crs(epsg=4326)
-        feature_list = [{'feature_class': i, 'total_area': j} for i,j in feature_perimeter.items()]
+        feature_list = [{'feature_class': i, 'total_perimeter': j} for i,j in feature_perimeter.items()]
     except Exception:
         new_gdf = gpd.GeoDataFrame(gdf[[feature, 'geometry']])
         new_gdf['centroid'] = gdf.geometry.centroid.to_crs(epsg=4326)
@@ -122,7 +123,7 @@ def get_feature_centroid(layer: str, feature: str):
 
 
 @app.get("/{layer}/area/{feature}/{feature_class}")
-def get_feature_area(layer, feature, feature_class):
+def get_feature_area(layer, feature, feature_class) -> FeatureAreaShort:
     """
     Calculate total area for a specific feature class in a layer.
 
